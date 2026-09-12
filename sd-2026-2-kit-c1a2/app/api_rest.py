@@ -1,73 +1,43 @@
-"""
-Interface REST do servico de inferencia.
-
-O QUE JA ESTA PRONTO:
-  - carregamento do modelo UMA vez, na subida (nao a cada requisicao)
-  - rota sincrona /predict-sync, usada no laboratorio da Aula 6
-
-O QUE VOCE PRECISA FAZER (TAREFAS.md, itens 1 e 2):
-  - POST /predict  -> colocar na fila e devolver o id
-  - GET  /resultado/{id} -> devolver o resultado quando estiver pronto
-
-Rodar:  uvicorn app.api_rest:app --reload --port 8000
-Docs:   http://localhost:8000/docs
-"""
+import logging
 import time
-
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
+from app import fila, modelo
 
-from app.modelo import carregar_modelo
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
-app = FastAPI(title="Servico de Inferencia - C1.A2", version="0.1.0")
+app = FastAPI(title="Serviço de Inferência de Sentimento")
 
-modelo = None
+# Carrega o modelo de IA uma única vez na inicialização
+modelo_instancia = modelo.carregar_modelo()
 
-
-class Entrada(BaseModel):
+class PredictRequest(BaseModel):
     texto: str
 
-
-@app.on_event("startup")
-def _subir():
-    """Carrega o modelo UMA vez. Este e o ponto-chave da Aula 6."""
-    global modelo
-    inicio = time.time()
-    modelo = carregar_modelo()
-    print(f"[startup] modelo carregado em {time.time() - inicio:.3f}s")
-
-
-@app.get("/saude")
-def saude():
-    return {"status": "ok", "modelo_carregado": modelo is not None}
-
-
 @app.post("/predict-sync")
-def predict_sync(entrada: Entrada):
-    """Inferencia SINCRONA: o cliente espera a resposta. Lab da Aula 6."""
-    if not entrada.texto.strip():
-        raise HTTPException(status_code=400, detail="texto vazio")
-    inicio = time.time()
-    resultado = modelo.prever(entrada.texto)
-    resultado["tempo_ms"] = round((time.time() - inicio) * 1000, 2)
+def predict_sincrono(req: PredictRequest):
+    inicio = time.perf_counter()
+    res = modelo_instancia.prever(req.texto)
+    tempo_ms = (time.perf_counter() - inicio) * 1000
+    logging.info(f"[REST Sync] tamanho={len(req.texto)} chars | tempo={tempo_ms:.2f}ms")
+    return res
+
+@app.post("/predict", status_code=status.HTTP_202_ACCEPTED)
+def predict_assincrono(req: PredictRequest):
+    inicio = time.perf_counter()
+    job_id = fila.enfileirar(req.texto)
+    tempo_ms = (time.perf_counter() - inicio) * 1000
+    logging.info(f"[REST Async POST] id={job_id} | tamanho={len(req.texto)} chars | tempo={tempo_ms:.2f}ms")
+    return {"id": job_id, "status": "enfileirado"}
+
+@app.get("/resultado/{job_id}")
+def obter_resultado(job_id: str):
+    inicio = time.perf_counter()
+    resultado = fila.buscar_resultado(job_id)
+    tempo_ms = (time.perf_counter() - inicio) * 1000
+    if resultado is None:
+        logging.info(f"[REST Async GET] id={job_id} | status=NAO_ENCONTRADO | tempo={tempo_ms:.2f}ms")
+        raise HTTPException(status_code=404, detail="Resultado não encontrado ou ainda em processamento")
+    
+    logging.info(f"[REST Async GET] id={job_id} | status=SUCESSO | tempo={tempo_ms:.2f}ms")
     return resultado
-
-
-# ------------------------------------------------------------------
-# TAREFA 1 - submissao assincrona
-# ------------------------------------------------------------------
-# @app.post("/predict", status_code=202)
-# def predict(entrada: Entrada):
-#     """Deve enfileirar a tarefa e devolver {"id": ...} SEM esperar."""
-#     # DICA: use app.fila.enfileirar(entrada.texto)
-#     raise NotImplementedError("implemente a submissao assincrona")
-
-
-# ------------------------------------------------------------------
-# TAREFA 2 - consulta do resultado
-# ------------------------------------------------------------------
-# @app.get("/resultado/{tarefa_id}")
-# def resultado(tarefa_id: str):
-#     """Deve devolver o resultado; 404 se o id nao existir."""
-#     # DICA: use app.fila.buscar_resultado(tarefa_id)
-#     raise NotImplementedError("implemente a consulta de resultado")
