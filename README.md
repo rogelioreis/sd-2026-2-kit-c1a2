@@ -75,8 +75,8 @@ O modelo é instanciado na memória RAM **uma única vez** no startup do Worker 
 
 ### 1. Clonar o Repositório e Acessar o Diretório
 ```bash
-git clone https://github.com/rogelioreis/sd-2026-2.git
-cd sd-2026-2/sd-2026-2-kit-c1a2
+git clone https://github.com/rogelioreis/sd-2026-2-kit-c1a2.git
+cd sd-2026-2-kit-c1a2
 ```
 
 ### 2. Configurar o Ambiente Virtual
