@@ -1,11 +1,16 @@
 # Sistemas Distribuídos (2026/2) - Avaliação C1.A2
 **Sistema de Inferência de Sentimentos Assíncrono e Distribuído (REST & gRPC)**
 
+### Integrantes do Grupo
+* **Mariana Lopes Ferreira**
+* **Murilo da Silva Soares**
+* **Rogélio Soares Reis Filho**
+
 Este repositório contém a implementação de um sistema desacoplado e distribuído para processamento de inferência de sentimentos em texto. O projeto utiliza **FastAPI** para a interface REST, **gRPC** para comunicação de alta performance, **Redis** como broker de mensageria e armazenamento temporário (Key-Value), e **Workers de inferência** desacoplados.
 
 ---
 
-## 🏗️ Arquitetura e Decomposição em Serviços
+## Arquitetura e Decomposição em Serviços
 
 O sistema foi desenhado para separar a camada de recebimento de requisições da camada de processamento intensivo (inferência), garantindo resiliência e escalabilidade horizontal.
 
@@ -24,8 +29,8 @@ O sistema foi desenhado para separar a camada de recebimento de requisições da
              RPUSH tarefas |         | GET resultado:<id>
                            v         |
                       +--------------+----+
-                      |    Redis      |
-                      |  (Fila & KV)  |
+                      |    Redis          |
+                      |  (Fila & KV)      |
                       +------+------------+
                              |
                 BLPOP tarefas| RPUSH tarefas_dlq (falhas)
@@ -49,23 +54,20 @@ O sistema foi desenhado para separar a camada de recebimento de requisições da
 
 ---
 
-## 🛠️ Guia de Execução Reproduzível
+## Guia de Execução Reproduzível
 
 ### 1. Clonar o Repositório e Acessar o Diretório
 ```bash
-git clone https://github.com/howardroatti/sd-2026-2-kit-c1a2.git
-cd sd-2026-2-kit-c1a2
+git clone https://github.com/rogelioreis/sd-2026-2.git
+cd sd-2026-2/sd-2026-2-kit-c1a2
 ```
 
 ### 2. Configurar o Ambiente Virtual
 ```bash
 python3 -m venv .venv
 
-# Linux / macOS:
+# Linux
 source .venv/bin/activate
-
-# Windows:
-# .venv\Scripts\activate
 
 pip install -r requirements.txt
 ```
@@ -89,7 +91,7 @@ python3 -m grpc_tools.protoc -I proto --python_out=. --grpc_python_out=. proto/i
 
 ---
 
-## 🚀 Execução dos Serviços
+## Execução dos Serviços
 
 Abra terminais separados com o ambiente virtual ativado (`source .venv/bin/activate`):
 
@@ -97,7 +99,6 @@ Abra terminais separados com o ambiente virtual ativado (`source .venv/bin/activ
   ```bash
   uvicorn app.api_rest:app --reload --port 8000
   ```
-  *(Documentação interativa em http://localhost:8000/docs)*
 
 * **Terminal 2 - Worker de Processamento:**
   ```bash
@@ -111,7 +112,7 @@ Abra terminais separados com o ambiente virtual ativado (`source .venv/bin/activ
 
 ---
 
-## 📋 Evidências de Validação e Testes Práticos
+## Evidências de Validação e Testes Práticos
 
 ### Tarefa 1 & 2: Submissão Assíncrona e Polling de Resultados (REST)
 
@@ -180,15 +181,15 @@ python3 -c "import redis, json; r = redis.Redis(); r.rpush('tarefas', json.dumps
 
 **Log Sequencial do Worker (Tentativas e DLQ):**
 ```text
-2026-09-14 14:38:39,569 [INFO] [Worker] Processando job_id=teste-dlq-123 (tentativa 1/3)
-2026-09-14 14:38:39,570 [ERROR] [Worker] Erro no job_id=teste-dlq-123: 'NoneType' object has no attribute 'lower' | tempo=0.37ms
-2026-09-14 14:38:39,570 [WARNING] [Worker] Reenfileirado job_id=teste-dlq-123 para nova tentativa.
-2026-09-14 14:38:40,100 [INFO] [Worker] Processando job_id=teste-dlq-123 (tentativa 2/3)
-2026-09-14 14:38:40,101 [ERROR] [Worker] Erro no job_id=teste-dlq-123: 'NoneType' object has no attribute 'lower' | tempo=0.42ms
-2026-09-14 14:38:40,102 [WARNING] [Worker] Reenfileirado job_id=teste-dlq-123 para nova tentativa.
-2026-09-14 14:38:41,200 [INFO] [Worker] Processando job_id=teste-dlq-123 (tentativa 3/3)
-2026-09-14 14:38:41,201 [ERROR] [Worker] Erro no job_id=teste-dlq-123: 'NoneType' object has no attribute 'lower' | tempo=0.22ms
-2026-09-14 14:38:41,202 [ERROR] [Worker] job_id=teste-dlq-123 atingiu limite de tentativas e foi enviado para a Dead-Letter Queue (DLQ).
+2026-09-14 15:18:14,630 [INFO] [Worker] Processando job_id=teste-dlq-123 (tentativa 1/3)
+2026-09-14 15:18:14,635 [ERROR] [Worker] Erro no job_id=teste-dlq-123: 'NoneType' object has no attribute 'lower' | tempo=7.60ms
+2026-09-14 15:18:14,636 [WARNING] [Worker] Reenfileirado job_id=teste-dlq-123 para nova tentativa.
+2026-09-14 15:18:14,643 [INFO] [Worker] Processando job_id=teste-dlq-123 (tentativa 2/3)
+2026-09-14 15:18:14,646 [ERROR] [Worker] Erro no job_id=teste-dlq-123: 'NoneType' object has no attribute 'lower' | tempo=2.84ms
+2026-09-14 15:18:14,646 [WARNING] [Worker] Reenfileirado job_id=teste-dlq-123 para nova tentativa.
+2026-09-14 15:18:14,652 [INFO] [Worker] Processando job_id=teste-dlq-123 (tentativa 3/3)
+2026-09-14 15:18:14,652 [ERROR] [Worker] Erro no job_id=teste-dlq-123: 'NoneType' object has no attribute 'lower' | tempo=0.18ms
+2026-09-14 15:18:14,653 [ERROR] [Worker] job_id=teste-dlq-123 atingiu limite de tentativas e foi enviado para a Dead-Letter Queue (DLQ).
 ```
 
 **Conferência da DLQ no Redis:**
