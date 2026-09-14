@@ -27,7 +27,7 @@ def iniciar_worker():
             logger.error(f"Erro ao decodificar JSON: {e}")
             continue
 
-        job_id = tarefa.get("job_id", "desconhecido")
+        job_id = tarefa.get("id") or tarefa.get("job_id", "desconhecido")
         tentativas = tarefa.get("tentativas", 0) + 1
         texto = tarefa.get("texto")
 
@@ -47,6 +47,7 @@ def iniciar_worker():
             tempo_ms = (time.time() - inicio) * 1000
             logger.error(f"Erro no job_id={job_id}: {e} | tempo={tempo_ms:.2f}ms")
 
+            tarefa["id"] = job_id
             tarefa["tentativas"] = tentativas
             tarefa["erro"] = str(e)
 
