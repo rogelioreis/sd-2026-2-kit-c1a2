@@ -114,12 +114,14 @@ Abra terminais separados com o ambiente virtual ativado (`source .venv/bin/activ
 
 ## Evidências de Validação e Testes Práticos
 
-### Tarefa 1 & 2: Submissão Assíncrona e Polling de Resultados (REST)
+### Tarefas 1, 2 e 3: Fluxo Assíncrono REST e Gravação de Resultados pelo Worker
 
-**1. Submissão do Job (`POST /predict`):**
-Retorna imediatamente o status HTTP `202 Accepted` e o ID do trabalho gerado.
+**1. Submissão do Job (`POST /predict` - Tarefa 1):**
+Retorna imediatamente o status HTTP `202 Accepted` e o ID do trabalho enfileirado no Redis.
 ```bash
-curl -i -X POST "http://127.0.0.1:8000/predict"      -H "Content-Type: application/json"      -d '{"texto": "Teste de validacao do job_id no worker"}'
+curl -i -X POST "http://127.0.0.1:8000/predict" \
+     -H "Content-Type: application/json" \
+     -d '{"texto": "Teste de validacao do job_id no worker"}'
 ```
 *Saída obtida:*
 ```http
@@ -132,8 +134,12 @@ content-type: application/json
 {"id":"6fbfa58e-741b-4ba8-ad07-0c49cca1262a","status":"enfileirado"}
 ```
 
-**2. Consulta de Resultado (`GET /resultado/{id}`):**
-Durante o processamento, a rota retorna `404 Not Found`. Após a conclusão do worker, retorna `200 OK` com o payload estruturado.
+**2. Processamento e Persistência do Resultado (`Worker` - Tarefa 3):**
+O `app/worker.py` consome a mensagem do Redis via `BLPOP`, executa a inferência de sentimento e grava o resultado invocando `fila.guardar_resultado(job_id, resultado)` sob a chave `resultado:<job_id>`.
+
+**3. Consulta do Resultado (`GET /resultado/{id}` - Tarefa 2):**
+A API REST recupera a chave no Redis gravada pelo worker na Tarefa 3 e retorna HTTP `200 OK` com a resposta estruturada.
+
 ```bash
 curl -i "http://127.0.0.1:8000/resultado/6fbfa58e-741b-4ba8-ad07-0c49cca1262a"
 ```
@@ -147,7 +153,6 @@ content-type: application/json
 
 {"texto":"Teste de validacao do job_id no worker","sentimento":"negativo","confianca":0.5242}
 ```
-
 ---
 
 ### Tarefa 4: Comunicação gRPC (`Prever` e `PreverLote`)
