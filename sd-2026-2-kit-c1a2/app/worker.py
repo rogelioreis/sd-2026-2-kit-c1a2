@@ -2,7 +2,7 @@ import json
 import logging
 import time
 import redis
-from app.modelo import ModeloSentimento
+from app.modelo import carregar_modelo
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [Worker] %(message)s")
 logger = logging.getLogger(__name__)
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 def iniciar_worker():
     r = redis.Redis(host='localhost', port=6379, db=0)
     logger.info("Carregando modelo de sentimento...")
-    modelo = ModeloSentimento()
+    modelo = carregar_modelo()
     logger.info("Aguardando tarefas na fila Redis...")
 
     while True:
