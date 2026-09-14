@@ -36,7 +36,7 @@ Marque conforme for concluindo. Cada item aponta o arquivo e a aula de referenci
 
 ## Antes de entregar
 
-- [ ] Apague a pasta, clone do zero e siga o SEU README - funciona?
-- [ ] As duas interfaces (REST e gRPC) devolvem o mesmo resultado para o mesmo texto?
-- [ ] O modelo e carregado UMA vez (e nao a cada requisicao)?
+- [x] Apague a pasta, clone do zero e siga o SEU README - funciona?
+- [x] As duas interfaces (REST e gRPC) devolvem o mesmo resultado para o mesmo texto?
+- [x] O modelo e carregado UMA vez (e nao a cada requisicao)?
 - [ ] Ha commits ao longo do periodo (e nao um unico commit no final)?
