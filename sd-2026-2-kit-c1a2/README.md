@@ -52,6 +52,23 @@ O sistema foi desenhado para separar a camada de recebimento de requisições da
 3. **Worker de Inferência (`app/worker.py`)**: Processo em segundo plano que consome jobs do Redis via `BLPOP`, executa o modelo de sentimento offline (`app/modelo.py`) e trata retentativas em caso de erro.
 4. **Servidor gRPC (`app/servidor_grpc.py`)**: Serviço de alto desempenho que expõe os métodos unicast `Prever` e em lote `PreverLote`.
 
+### Design e Boas Práticas Arquiteturais
+* **Carregamento Único do Modelo (In-Memory)**: O modelo de inferência (`app/modelo.py`) é instanciado **uma única vez** durante a inicialização do processo no `app/worker.py` e no `app/servidor_grpc.py`. As requisições subsequentes do Redis (`BLPOP`) e chamadas gRPC reutilizam a instância pré-alocada na RAM, evitando overhead de carregamento de disco/pesos a cada requisição.
+* **Consistência do Modelo**: Ambas as interfaces (REST e gRPC) importam a mesma classe base de inferência, garantindo idêntica classificação e confiança para uma mesma entrada.
+
+### Carregamento Único do Modelo (In-Memory)
+
+O modelo é instanciado na memória RAM **uma única vez** no startup do Worker (`app/worker.py`) e reutilizado em todas as requisições subsequentes do Redis.
+
+**Log real de execução contínua do Worker:**
+```text
+2026-09-14 17:08:28,820 [INFO] [Worker] Carregando modelo de sentimento...
+2026-09-14 17:08:28,821 [INFO] [Worker] Aguardando tarefas na fila Redis...
+2026-09-14 17:12:29,979 [INFO] [Worker] Processando job_id=5a754cfa-711d-450a-9e51-9576846f1699 (tentativa 1/3)
+2026-09-14 17:12:29,985 [INFO] [Worker] Concluído job_id=5a754cfa-711d-450a-9e51-9576846f1699 | tempo=5.94ms
+2026-09-14 17:12:42,794 [INFO] [Worker] Processando job_id=548c3c8f-421f-48bb-80f8-b75e692ed193 (tentativa 1/3)
+2026-09-14 17:12:42,799 [INFO] [Worker] Concluído job_id=548c3c8f-421f-48bb-80f8-b75e692ed193 | tempo=5.30ms
+```
 ---
 
 ## Guia de Execução Reproduzível
